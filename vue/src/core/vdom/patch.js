@@ -498,6 +498,7 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // diff算法发生的地方
   function patchVnode (
     oldVnode,
     vnode,
@@ -545,27 +546,37 @@ export function createPatchFunction (backend) {
       i(oldVnode, vnode)
     }
 
+    // 查找新旧节点是否有孩子
     const oldCh = oldVnode.children
     const ch = vnode.children
+
     if (isDef(data) && isPatchable(vnode)) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
     if (isUndef(vnode.text)) {
       if (isDef(oldCh) && isDef(ch)) {
+        // 双方都有孩子
+        // 递归地更新孩子。
         if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
       } else if (isDef(ch)) {
+        // 新节点有孩子
         if (process.env.NODE_ENV !== 'production') {
           checkDuplicateKeys(ch)
         }
+        // 清空老节点文本
         if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '')
+        // 创建孩子并追加
         addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue)
       } else if (isDef(oldCh)) {
+        // 老节点有孩子，删除即可。
         removeVnodes(oldCh, 0, oldCh.length - 1)
       } else if (isDef(oldVnode.text)) {
+        // 老节点存在文本，清空。
         nodeOps.setTextContent(elm, '')
       }
     } else if (oldVnode.text !== vnode.text) {
+      // 双方都是文本节点，更新文本
       nodeOps.setTextContent(elm, vnode.text)
     }
     if (isDef(data)) {
