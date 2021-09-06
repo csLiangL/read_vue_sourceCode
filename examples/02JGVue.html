@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手写Vue构造方法</title>
+</head>
+
+<body>
+    <div id="root">
+        <p>{{bill.person.name}}</p>
+    </div>
+
+    <script>
+
+        function compiler(templateNode, data) {
+            // 遍历孩子节点，找到templateNode中含有的{{}}部分
+            let childNodes = templateNode.childNodes;
+            for (let i = 0; i < childNodes.length; i++) {
+                // 判断节点的类型
+                let type = childNodes[i].nodeType;
+                if (type === 3) {
+                    // 文本节点：替换{{}}
+                    childNodes[i].nodeValue = childNodes[i].nodeValue.replace(
+                        /\{\{(.+?)\}\}/,
+                        function (_, g) {                     // 替换文本的函数：每找到一个匹配结果，就调用一次该回调函数，返回值为替换文本。
+                            // 第0个参数为匹配到的结果如"{{msg}}"，第1个参数为分组如"msg"。
+                            return getValueByPath(data, g.trim())
+                        }
+                    )
+                } else if (type === 1) {
+                    // 元素节点
+                    compiler(childNodes[i], data);
+                }
+            }
+        }
+
+        function getValueByPath(obj, path) {
+            let paths = path.split(".");    // [bill, person, userid]
+            let res = obj;
+            let prop;
+            while (prop = paths.shift()) {
+                res = res[prop];
+            }
+            return res;
+        }
+
+        // 函数柯里化：先处理path参数，再处理obj参数。
+        function createGetValueByPath(path) {
+            let paths = path.split(".");    // [bill, person, userid]
+
+            return function getValueByPath(obj) {
+                let res = obj;
+                let prop;
+                while (prop = paths.shift()) {
+                    res = res[prop];
+                }
+                return res;
+            }
+        }
+
+
+        function JGVue(options) {
+            // _开头的为内部数据
+            this._el = options.el;
+            this._data = options.data;
+
+            this._templateDOM = document.querySelector(this._el);
+            this._parent = this._templateDOM.parentNode;
+
+            this.render();
+        }
+
+        // 使用prototype为构造函数定义公共方法，则未来的实例使用的都是同一个方法。
+        JGVue.prototype.render = function () {
+            // 模板 + 数据 => 返回页面
+            this.compiler();
+        }
+
+        JGVue.prototype.compiler = function () {
+            let realNode = this._templateDOM.cloneNode(true);
+            compiler(realNode, this._data);
+            this.update(realNode);
+        }
+
+        JGVue.prototype.update = function (realNode) {
+            this._parent.replaceChild(realNode, this._templateDOM)
+        }
+
+
+
+        const app = new JGVue({
+            el: "#root",
+            data: {
+                name: "zhangsan",
+                bill: {
+                    date: "2020/9/4",
+                    num: 24.00,
+                    person: {
+                        userid: 1,
+                        name: "zhangsan",
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

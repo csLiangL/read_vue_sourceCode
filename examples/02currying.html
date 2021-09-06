@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>函数柯里化</title>
+</head>
+
+<body>
+    <script>
+
+
+        function sum(a, b, c) {
+            console.log(a + b + c);
+        }
+
+        // fn: 待柯里化的函数(包含全部参数)
+        // collectingArgs: 之前传入的所有参数都是需要被收集的。
+        // 返回柯里化后的嵌套函数。
+        function curry(fn, collectingArgs) {
+
+            return function () {
+
+                let collectedArgs = [];
+
+                // 收集之前的所有参数
+                if (collectingArgs !== undefined) {
+                    collectedArgs.push(...collectingArgs);
+                }
+
+                // 收集当前传入的参数
+                // arguments: 每次真正调用时传入的参数 如(1)或(1, 2)或(1, 2, 3)
+                collectedArgs.push(...Array.prototype.slice.call(arguments));      
+                
+                // 未收集完成
+                if (collectedArgs.length < fn.length) {
+                    // 继续收集
+                    return curry(fn, collectedArgs);
+                }
+
+                // 收集完成
+                return fn.apply(null, collectedArgs);
+                // return fn(...collectedArgs)
+            }
+        }
+
+
+        const fn = curry(sum);
+
+        fn(1, 2, 8); // 11
+        fn(1, 2)(5); // 8
+        fn(1)(4, 3); // 8
+        fn(1, 5)(3); // 9
+    </script>
+</body>
+
+</html>
