@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JGVue重构</title>
+</head>
+
+<body>
+    <div id="root">
+        <p>{{name}}</p>
+        <p>{{age}}</p>
+    </div>
+
+    <script>
+
+        // 虚拟DOM的构造函数
+        class VNode {
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+        function getValueByPath(obj, path) {
+            let arr = path.split(".");
+            let res = obj;
+            let prop;
+            while (prop = arr.shift()) {
+                res = res[prop];
+            }
+            return res;
+        }
+
+        // 有坑的虚拟DOM => 无坑的虚拟DOM
+        function combine(vnode, data) {
+            let _type = vnode.type;
+            let _tag = vnode.tag;
+            let _data = vnode.data;
+            let _value = vnode.value;
+
+            let _vnode = new VNode(_tag, _data, _value, _type);
+
+            if (_type == 1) {
+                vnode.children.forEach(child => {
+                    _vnode.appendChild(combine(child, data));
+                })
+            } else if (_type == 3) {
+                _vnode.value = vnode.value.replace(
+                    /\{\{(.+?)\}\}/,
+                    function (_, g) {
+                        return getValueByPath(data, g.trim())
+                    }
+                )
+            }
+            return _vnode;
+        }
+
+        // 真正的DOM => 为虚拟DOM
+        function parseToVNode(node) {
+            let nodeType = node.nodeType;
+            let _vnode = null;
+
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let _attrObj = {};
+
+                Array.prototype.forEach.call(attrs, (value, idx) => {
+                    _attrObj[value.nodeName] = value.nodeValue;
+                })
+
+                _vnode = new VNode(nodeName, _attrObj, undefined, nodeType);
+
+                let children = node.childNodes;
+                Array.prototype.forEach.call(children, (childNode, idx) => {
+                    _vnode.appendChild(parseToVNode(childNode));
+                })
+            } else if (nodeType === 3) {
+                _vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+
+            return _vnode;
+        }
+
+        // Vue实例的构造函数
+        function JGVue(options) {
+
+            this._template = document.querySelector(options.el);
+            this._data = options.data;
+
+            // 挂载
+            this.mount();
+        }
+
+        // 挂载：
+        // 1. 模板 => AST    
+        // 2. AST => 不带数据的VNode
+        // 3. 挂载组件
+        // 这里将1和2简化为 从 模板 直接到 不带数据 的VNode, 再从 不带数据 的VNode到 带数据 的Vnode(render函数)
+        JGVue.prototype.mount = function () {
+            // 创建render函数(可以用户自己提供)
+            this.render = this.createRenderFn();
+            this.render();
+            // 挂载组件
+        }
+
+        JGVue.prototype.createRenderFn = function () {
+            // 这里将ast简化为不带数据的VNode
+            let ast = parseToVNode(this._template);
+            return function () {
+                combine(ast, this._data);
+            }
+        }
+
+        new JGVue({
+            el: "#root",
+            data: {
+                name: "zhangsan",
+                age: 18
+            }
+        })
+    </script>
+</body>
+
+</html>
