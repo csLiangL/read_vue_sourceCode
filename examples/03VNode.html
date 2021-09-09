@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚拟DOM和真实DOM之间的转换</title>
+
+    <!-- 
+        1. VDOM的构造函数。
+        2. 真实DOM -> 虚拟DOM     new VNode();
+           虚拟DOM -> 真实DOM     document.createElement();
+     -->
+</head>
+
+<body>
+
+
+    <div id="root" class="title">
+        123
+        <div class="son1">
+            <p id="sunp1">sunp1</p>
+            <p id="sunp2">sunp2</p>
+            <p id="sunp3">sunp3</p>
+        </div>
+
+
+        <div class="son2">
+            <h1 class="sunh1">1</h1>
+            <h2 class="sunh2">2</h2>
+            <h3 class="sunh3">3</h3>
+        </div>
+    </div>
+
+
+    <script>
+
+        // 虚拟DOM定义
+        class VNode {
+            // tag: String, 标签名，如div
+            // data: obj, 标签的属性，如 {class: "title", id: "root"}
+            // value: String, 标签内的文本
+            // type: Number, 标签的类型, 1表示元素节点，3表示文本节点
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+
+        // 将真正的DOM转换为虚拟DOM
+        function parseToVNode(node) {
+            let nodeType = node.nodeType;
+            let _vnode = null;
+
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let _attrObj = {};
+
+                Array.prototype.forEach.call(attrs, (value, idx) => {
+                    _attrObj[value.nodeName] = value.nodeValue;
+                })
+
+                _vnode = new VNode(nodeName, _attrObj, undefined, nodeType);
+
+                let children = node.childNodes;
+                Array.prototype.forEach.call(children, (childNode, idx) => {
+                    _vnode.appendChild(parseToVNode(childNode));
+                })
+            } else if (nodeType === 3) {
+                _vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+
+            return _vnode;
+        }
+
+        // 测试
+        let root = document.querySelector("#root");
+        let vNode = parseToVNode(root)
+        console.log(vNode);
+
+        // 将虚拟DOM还原成真实DOM
+        function parseToNode(vnode) {
+
+            let vnodeType = vnode.type;
+            let _node = null;
+
+            if (vnodeType == 1) {
+
+                // tag
+                _node = document.createElement(vnode.tag);
+
+                // data
+                let data = vnode.data;
+                for (let attr in data) {
+                    _node.setAttribute(attr, data[attr]);
+                }
+
+                // children
+                vnode.children.forEach(child => {
+                    _node.appendChild(parseToNode(child));
+                })
+
+            } else if (vnodeType == 3) {
+                _node = document.createTextNode(vnode.value);
+            }
+
+            return _node;
+        }
+
+        // let textvnode = vNode.children[0];
+        // console.log(textvnode);
+        // let _node = parseToNode(textvnode);
+        // console.log(_node.nodeType)
+        // 测试
+        let _node = parseToNode(vNode);
+        console.log(_node);
+
+
+    </script>
+</body>
+
+</html>

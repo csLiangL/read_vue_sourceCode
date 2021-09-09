@@ -7,6 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据驱动手写</title>
     <script src="../vue/dist/vue.js"></script>
+    <!-- 
+        编译 真实模板DOM + data => 真实DOM 
+    -->
 </head>
 
 <body>
@@ -35,22 +38,22 @@
             pmsg: "this is in p",
         }
 
-        function compiler(templateNode, data){
+        function compiler(templateNode, data) {
             // 遍历孩子节点，找到templateNode中含有的{{}}部分
             let childNodes = templateNode.childNodes;
-            for(let i=0; i<childNodes.length; i++){
+            for (let i = 0; i < childNodes.length; i++) {
                 // 判断节点的类型
                 let type = childNodes[i].nodeType;
-                if( type===3 ){
+                if (type === 3) {
                     // 文本节点：替换{{}}
                     childNodes[i].nodeValue = childNodes[i].nodeValue.replace(
                         /\{\{(.+?)\}\}/,
-                        function(_, g){                     // 替换文本的函数：每找到一个匹配结果，就调用一次该回调函数，返回值为替换文本。
-                                                            // 第0个参数为匹配到的结果如"{{msg}}"，第1个参数为分组如"msg"。
+                        function (_, g) {                     // 替换文本的函数：每找到一个匹配结果，就调用一次该回调函数，返回值为替换文本。
+                            // 第0个参数为匹配到的结果如"{{msg}}"，第1个参数为分组如"msg"。
                             return data[g.trim()]
                         }
                     )
-                }else if( type===1 ){
+                } else if (type === 1) {
                     // 元素节点
                     compiler(childNodes[i], data);
                 }

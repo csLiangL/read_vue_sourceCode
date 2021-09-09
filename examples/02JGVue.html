@@ -6,6 +6,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>手写Vue构造方法</title>
+    <!-- 
+        1. mustach语法 x.x.x 的解析函数
+        2. 例1的模块化, Vue实例的构造函数(真实模板DOM+数据 => 真实DOM)
+     -->
 </head>
 
 <body>
@@ -15,6 +19,31 @@
 
     <script>
 
+        // 对模板中的mustach语法进行解析。
+        function getValueByPath(obj, path) {
+            let paths = path.split(".");    // [bill, person, userid]
+            let res = obj;
+            let prop;
+            while (prop = paths.shift()) {
+                res = res[prop];
+            }
+            return res;
+        }
+
+        // 函数柯里化：先处理path参数，再处理obj参数。
+        function createGetValueByPath(path) {
+            let paths = path.split(".");    // [bill, person, userid]
+            return function getValueByPath(obj) {
+                let res = obj;
+                let prop;
+                while (prop = paths.shift()) {
+                    res = res[prop];
+                }
+                return res;
+            }
+        }
+
+        // 编译模板
         function compiler(templateNode, data) {
             // 遍历孩子节点，找到templateNode中含有的{{}}部分
             let childNodes = templateNode.childNodes;
@@ -37,31 +66,7 @@
             }
         }
 
-        function getValueByPath(obj, path) {
-            let paths = path.split(".");    // [bill, person, userid]
-            let res = obj;
-            let prop;
-            while (prop = paths.shift()) {
-                res = res[prop];
-            }
-            return res;
-        }
-
-        // 函数柯里化：先处理path参数，再处理obj参数。
-        function createGetValueByPath(path) {
-            let paths = path.split(".");    // [bill, person, userid]
-
-            return function getValueByPath(obj) {
-                let res = obj;
-                let prop;
-                while (prop = paths.shift()) {
-                    res = res[prop];
-                }
-                return res;
-            }
-        }
-
-
+        // JGVue构造函数
         function JGVue(options) {
             // _开头的为内部数据
             this._el = options.el;
@@ -88,8 +93,6 @@
         JGVue.prototype.update = function (realNode) {
             this._parent.replaceChild(realNode, this._templateDOM)
         }
-
-
 
         const app = new JGVue({
             el: "#root",
