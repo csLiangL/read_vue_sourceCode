@@ -40,7 +40,7 @@
             return res;
         }
 
-        // 有坑的虚拟DOM => 无坑的虚拟DOM
+        // 有坑的虚拟DOM => 带数据的虚拟DOM
         function combine(vnode, data) {
             let _type = vnode.type;
             let _tag = vnode.tag;
@@ -91,11 +91,41 @@
             return _vnode;
         }
 
+        // 将虚拟DOM还原成真实DOM
+        function parseToNode(vnode) {
+
+            let vnodeType = vnode.type;
+            let _node = null;
+
+            if (vnodeType == 1) {
+
+                // tag
+                _node = document.createElement(vnode.tag);
+
+                // data
+                let data = vnode.data;
+                for (let attr in data) {
+                    _node.setAttribute(attr, data[attr]);
+                }
+
+                // children
+                vnode.children.forEach(child => {
+                    _node.appendChild(parseToNode(child));
+                })
+
+            } else if (vnodeType == 3) {
+                _node = document.createTextNode(vnode.value);
+            }
+
+            return _node;
+        }
+
         // Vue实例的构造函数
         function JGVue(options) {
 
             this._template = document.querySelector(options.el);
             this._data = options.data;
+            this._parent = this._template.parentNode;
 
             // 挂载
             this.mount();
@@ -109,16 +139,25 @@
         JGVue.prototype.mount = function () {
             // 创建render函数(可以用户自己提供)
             this.render = this.createRenderFn();
-            this.render();
             // 挂载组件
+            this.mountComponent();
         }
 
         JGVue.prototype.createRenderFn = function () {
             // 这里将ast简化为不带数据的VNode
             let ast = parseToVNode(this._template);
             return function () {
-                combine(ast, this._data);
+                return combine(ast, this._data);
             }
+        }
+
+        JGVue.prototype.mountComponent = function () {
+            this.update(this.render());
+        }
+
+        JGVue.prototype.update = function (node) {
+            let realNode = parseToNode(node);
+            this._parent.replaceChild(realNode, this._template)
         }
 
         new JGVue({
