@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defineProperty的使用</title>
+</head>
+
+<body>
+    <script>
+        let o = {
+            name: "zhangsan",
+            hobbys: ["swimming", "basketball", "football"],
+            friend: {
+                name: "lisi",
+                age: 18
+            }
+        };
+
+
+        // 将对象target的属性设置为响应式
+        function defineReactive(target, key, value, enumerable) {
+            // 利用函数的闭包: definProperty中可以访问defineReactive中的value
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: !!enumerable,
+                set(val) {
+                    value = val;
+                },
+                get(val) {
+                    return value;
+                }
+            })
+        }
+
+        // 递归: 将 对象/数组 中的嵌套属性变成响应式。
+        function reactify(o) {
+            for (let key in o) {
+                let value = o[key];
+                // value是基本数据类型
+                if (typeof value !== "object") {
+                    defineReactive(o, key, value, true);
+                } else {
+                    if (value != null) {        // 对象类型(包括数组)
+                        reactify(value);
+                    }
+                }
+            }
+        }
+
+        reactify(o);
+    </script>
+
+</body>
+
+</html>
