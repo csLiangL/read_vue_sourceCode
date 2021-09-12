@@ -15,7 +15,12 @@
             friend: {
                 name: "lisi",
                 age: 18
-            }
+            },
+            address: [{
+                name: "朝阳",
+            }, {
+                name: "管庄"
+            }]
         };
 
 
@@ -27,8 +32,10 @@
                 enumerable: !!enumerable,
                 set(val) {
                     value = val;
+                    console.log(`设置${key}属性为${value}`)
                 },
                 get(val) {
+                    console.log(`获取${key}属性`)
                     return value;
                 }
             })
