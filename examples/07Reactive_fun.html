@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试响应式原理函数</title>
+</head>
+
+<body>
+    <script>
+        methods = [
+            "push",
+            "pop",
+            "shift",
+            "unshift",
+            "slice",
+            "splice",
+        ]
+        // 重写数组的原型对象。
+        let newProto = Object.create(Array.prototype);
+        methods.forEach(method => {
+            newProto[method] = function () {
+                console.log(`调用截取的${method}方法`)
+                let res = Array.prototype[method].apply(this, arguments);
+                return res;
+            }
+        });
+
+        function defineReactive(target, key, value, enumerable) {
+            // 利用函数的闭包: definProperty中可以访问defineReactive中的value
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: !!enumerable,
+                set(val) {
+                    console.log(`设置${key}的值`)
+                    if (typeof val === "object" && val !== null) {
+                        reactify(val);
+                    }
+                    value = val;
+                },
+                get() {
+                    console.log(`获取${key}的值`)
+                    if (typeof value === "object" && value !== null) {      // 代码2：数组原生方法push时，会调用arguments中元素的get方法。
+                        reactify(value);
+                    }
+                    return value;
+                }
+            })
+        }
+
+        // 递归: 将 对象/数组 中的嵌套属性变成响应式。
+        // 这么写，则若是数组传递首次传递进来，则自身并没有变成响应式。
+        // 类似于对象首次传递进来，其自身并没有变成响应式。
+        function reactify(o) {
+            if (Array.isArray(o)) {
+                o.__proto__ = newProto;
+            }
+            for (let key in o) {
+                let value = o[key];
+                if (typeof value !== "function") {      // 不枚举 对象的 方法。
+                    // 属性值是基本数据类型
+                    if (typeof value !== "object") {
+                        defineReactive(o, key, value, true);
+                    } else if (value != null) {
+                        defineReactive(o, key, value, true);        //代码1： 属性值是数组/对象类型，也要把该属性变成响应式
+                        reactify(value);
+                    }
+                }
+            }
+        }
+
+        let o = {
+            address: ["北京", "上海"],
+            friends: [{ name: "小红" }, { name: "小明" }]
+        }
+
+        // o.address[0] = xxx 能够触发set事件
+        // o.friends[0] = xxx 无法触发set事件，代码1解决
+        // o.friends.push时，基本数据类型无法响应式，代码2解决
+        reactify(o)
+    </script>
+</body>
+
+</html>

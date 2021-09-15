@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GJVue数组响应式bug解决，让app代理app._data</title>
+</head>
+
+<body>
+    <div id="root">
+        <p>{{name}}</p>
+        <p>{{address.0}}</p>
+        <p>{{friends.0.name}}</p>
+    </div>
+
+    <script>
+
+        methods = [
+            "push",
+            "pop",
+            "shift",
+            "unshift",
+            "slice",
+            "splice",
+        ]
+        // 重写数组的原型对象。
+        let newProto = Object.create(Array.prototype);
+        methods.forEach(method => {
+            newProto[method] = function () {
+                console.log(`调用截取的${method}方法`)
+                let res = Array.prototype[method].apply(this, arguments);
+                return res;
+            }
+        });
+
+        // 将对象target的属性设置为响应式
+        function defineReactive(vm, target, key, value, enumerable) {
+            // 利用函数的闭包: definProperty中可以访问defineReactive中的value
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: !!enumerable,
+                set(val) {
+                    console.log(`设置${key}的值`)
+                    if (typeof val === "object" && val !== null) {      // 赋值操作时，能将赋值号右边的变量(若是对象的话)转化为响应式的。
+                        reactify(vm, val);
+                    }
+                    value = val;
+                    vm.mountComponent();
+                },
+                get() {
+                    console.log(`获取${key}的值`)
+                    if (typeof value === "object" && value !== null) {      // 代码2：数组原生方法push时，会调用arguments中元素的get方法。
+                        reactify(vm, value);
+                    }
+                    return value;
+                }
+            })
+        }
+
+        // 递归: 将 对象/数组 中的嵌套属性变成响应式。
+        // 这么写，则若是数组传递首次传递进来，则自身并没有变成响应式。
+        // 类似于对象首次传递进来，其自身并没有变成响应式。
+        function reactify(vm, o) {
+            if (Array.isArray(o)) {
+                o.__proto__ = newProto;
+            }
+            for (let key in o) {
+                let value = o[key];
+                if (typeof value !== "function") {      // 不枚举 对象的 方法。
+                    // 属性值是基本数据类型
+                    if (typeof value !== "object") {
+                        defineReactive(vm, o, key, value, true);
+                    } else if (value != null) {
+                        defineReactive(vm, o, key, value, true);        //代码1： 属性值是数组/对象类型，也要把该属性变成响应式
+                        reactify(vm, value);
+                    }
+                }
+            }
+        }
+
+        // 虚拟DOM的构造函数
+        class VNode {
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+        function getValueByPath(obj, path) {
+            let arr = path.split(".");
+            let res = obj;
+            let prop;
+            while (prop = arr.shift()) {
+                res = res[prop];
+            }
+            return res;
+        }
+
+        // 有坑的虚拟DOM => 带数据的虚拟DOM
+        function combine(vnode, data) {
+            let _type = vnode.type;
+            let _tag = vnode.tag;
+            let _data = vnode.data;
+            let _value = vnode.value;
+
+            let _vnode = new VNode(_tag, _data, _value, _type);
+
+            if (_type == 1) {
+                vnode.children.forEach(child => {
+                    _vnode.appendChild(combine(child, data));
+                })
+            } else if (_type == 3) {
+                _vnode.value = vnode.value.replace(
+                    /\{\{(.+?)\}\}/,
+                    function (_, g) {
+                        return getValueByPath(data, g.trim())       // 触发了读取器set
+                    }
+                )
+            }
+            return _vnode;
+        }
+
+        // 真正的DOM => 为虚拟DOM
+        function parseToVNode(node) {
+            let nodeType = node.nodeType;
+            let _vnode = null;
+
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let _attrObj = {};
+
+                Array.prototype.forEach.call(attrs, (value, idx) => {
+                    _attrObj[value.nodeName] = value.nodeValue;
+                })
+
+                _vnode = new VNode(nodeName, _attrObj, undefined, nodeType);
+
+                let children = node.childNodes;
+                Array.prototype.forEach.call(children, (childNode, idx) => {
+                    _vnode.appendChild(parseToVNode(childNode));
+                })
+            } else if (nodeType === 3) {
+                _vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+
+            return _vnode;
+        }
+
+        // 将虚拟DOM还原成真实DOM
+        function parseToNode(vnode) {
+
+            let vnodeType = vnode.type;
+            let _node = null;
+
+            if (vnodeType == 1) {
+
+                // tag
+                _node = document.createElement(vnode.tag);
+
+                // data
+                let data = vnode.data;
+                for (let attr in data) {
+                    _node.setAttribute(attr, data[attr]);
+                }
+
+                // children
+                vnode.children.forEach(child => {
+                    _node.appendChild(parseToNode(child));
+                })
+
+            } else if (vnodeType == 3) {
+                _node = document.createTextNode(vnode.value);
+            }
+
+            return _node;
+        }
+
+        // Vue实例的构造函数
+        function JGVue(options) {
+
+            this._template = document.querySelector(options.el);
+            this._data = options.data;
+            this._parent = this._template.parentNode;
+
+            this.initData();
+
+            // 挂载
+            this.mount();
+        }
+
+        JGVue.prototype.initData = function () {
+            // 让数据响应式化
+            reactify(this, this._data);
+            // 代理，让this._data[key] 映射到 this[key]上
+            for (let i in this._data) {
+                proxy(this, "_data", i)
+            }
+        }
+
+        // 挂载：
+        // 1. 模板 => AST    
+        // 2. AST => 不带数据的VNode
+        // 3. 挂载组件
+        // 这里将1和2简化为 从 模板 直接到 不带数据 的VNode(parseToVNode), 再从 不带数据 的VNode到 带数据 的Vnode(combine)
+        // render = parseToVNode + combine
+        JGVue.prototype.mount = function () {
+            // 创建render函数(可以用户自己提供)
+            this.render = this.createRenderFn();
+            // 挂载组件
+            this.mountComponent();
+        }
+
+        // 缓存模板VNode
+        JGVue.prototype.createRenderFn = function () {
+            // 这里将ast简化为不带数据的VNode
+            let ast = parseToVNode(this._template);
+            return function () {
+                return combine(ast, this._data);        // 返回带数据的VNode
+            }
+        }
+
+        // 将模板VNode转换为有数据的VNode
+        JGVue.prototype.mountComponent = function () {
+            this.update(this.render());
+        }
+
+        // 将VNode转化为Node，更新。
+        JGVue.prototype.update = function (vnode) {
+            let realNode = parseToNode(vnode);
+            this._parent.replaceChild(realNode, document.querySelector("#root"))
+        }
+
+        // 将对象的属性访问(this._data[key]) 映射到 该对象的某个属性成员上(this.key)
+        // 本质上，给target增加了一些属性，而这些属性的存取值都依赖于target.prop, 也就是这些值只保存了一份。
+        function proxy(target, prop, key) {
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: true,
+                set(newVal) {
+                    target[prop][key] = newVal;
+                },
+                get() {
+                    return target[prop][key];
+                }
+            })
+        }
+
+        let app = new JGVue({
+            el: "#root",
+            data: {
+                name: "zhangsan",
+                address: ['管庄', "北工大"],        // 这里push一个元素，该元素无法做到响应式。
+                friends: [{
+                    name: "lisi"
+                }, {
+                    name: "wangwu"
+                }],
+            }
+        })
+    </script>
+</body>
+
+</html>
