@@ -18,7 +18,7 @@
     <div id="root">
         <p>{{name}}</p>
         <p>{{address.0}}</p>
-        <p>{{friends.0.name}}</p>
+        <p>{{friends.1.gender}}</p>
     </div>
     <script>
         let app = new JGVue({
@@ -27,9 +27,9 @@
                 name: "zhangsan",
                 address: ['管庄', "北工大"],
                 friends: [{
-                    name: "lisi"
+                    age: 18
                 }, {
-                    name: "wangwu"
+                    gender: "女"
                 }],
             }
         })

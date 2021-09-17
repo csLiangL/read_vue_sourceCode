@@ -21,6 +21,7 @@ function defineReactive(vm, target, key, value, enumerable) {
     // 利用函数的闭包: definProperty中可以访问defineReactive中的value
 
     let dep = new Dep();
+    dep.__name__ = key
 
     Object.defineProperty(target, key, {
         configurable: true,
@@ -36,9 +37,9 @@ function defineReactive(vm, target, key, value, enumerable) {
         // 渲染时(VDOM + _data) 需要读取 _data中的值
         get() {
             console.log(`获取${key}的值`)
-            if (typeof value === "object" && value !== null) {      // 代码2：数组原生方法push时，会调用arguments中元素的get方法。
-                reactify(vm, value);
-            }
+            // if (typeof value === "object" && value !== null) {      // 代码2：数组原生方法push时，会调用arguments中元素的get方法。
+            //     reactify(vm, value);
+            // }
             dep.depend()    // 依赖收集
             return value;
         }
