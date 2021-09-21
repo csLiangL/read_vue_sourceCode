@@ -31,6 +31,7 @@ export function initRender (vm: Component) {
   vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
   // normalization is always applied for the public version, used in
   // user-written render functions.
+  // 如果用户提供了render函数，就不会触发 扩展的$mount方法 去生成 render。
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
 
   // $attrs & $listeners are exposed for easier HOC creation.

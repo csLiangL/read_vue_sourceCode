@@ -52,6 +52,7 @@ export function initState(vm: Component) {
   if (opts.props) initProps(vm, opts.props)
   if (opts.methods) initMethods(vm, opts.methods)
 
+  // Vue实例的data是个对象，组件的data是个函数。
   if (opts.data) {
     initData(vm)
   } else {
@@ -158,6 +159,9 @@ function initData(vm: Component) {
 
 export function getData(data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
+  // 此时是Vue实例的初始化，还没有进行模板渲染，所以不必进行依赖收集。
+  //    1. pushTarget传入空，即使得全局watcher设置为undefined。
+  //    2. 依赖收集时，判断Dep.target不存在，则不进行依赖收集。
   pushTarget()
   try {
     return data.call(vm, vm)
@@ -290,6 +294,7 @@ function initMethods(vm: Component, methods: Object) {
         )
       }
     }
+    // 将 methods 属性中的方法 绑定上下文后 挂载到 Vue实例上。
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
   }
 }

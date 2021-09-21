@@ -62,6 +62,7 @@ Vue.prototype.$mount = function (
         mark('compile')
       }
 
+      // 这里就是生成带有缓存功能的函数，该函数用于生成 虚拟DOM
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
         shouldDecodeNewlines,

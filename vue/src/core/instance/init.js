@@ -10,9 +10,11 @@ import { initLifecycle, callHook } from './lifecycle'
 import { initProvide, initInjections } from './inject'
 import { extend, mergeOptions, formatComponentName } from '../util/index'
 
+// 每个类型的实例(Vue实例，组件实例，watcher实例)都有的唯一标识
 let uid = 0
 
 export function initMixin (Vue: Class<Component>) {
+
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this
     // a uid
@@ -35,7 +37,7 @@ export function initMixin (Vue: Class<Component>) {
       // internal component options needs special treatment.
       initInternalComponent(vm, options)
     } else {
-      vm.$options = mergeOptions(
+      vm.$options = mergeOptions(   // 给options对象添加属性
         resolveConstructorOptions(vm.constructor),
         options || {},
         vm
@@ -47,15 +49,16 @@ export function initMixin (Vue: Class<Component>) {
     } else {
       vm._renderProxy = vm
     }
+    
     // expose real self
     vm._self = vm
     initLifecycle(vm)
     initEvents(vm)
-    initRender(vm)
+    initRender(vm)                    // 初始化 创建元素 的方法
     callHook(vm, 'beforeCreate')
-    initInjections(vm) // resolve injections before data/props
-    initState(vm)
-    initProvide(vm) // resolve provide after data/props
+    initInjections(vm)                // resolve injections before data/props
+    initState(vm)                     // 重点！！初始化状态数据(data, property)
+    initProvide(vm)                   // resolve provide after data/props
     callHook(vm, 'created')
 
     /* istanbul ignore if */
@@ -66,9 +69,13 @@ export function initMixin (Vue: Class<Component>) {
     }
 
     if (vm.$options.el) {
+      // 会先调用 扩展的 那个$mount方法，生成render
+      // 再调用 原始的 $mount方法，获得元素，再调用 mountComponent 方法
+      // platforms/web
       vm.$mount(vm.$options.el)
     }
   }
+  
 }
 
 export function initInternalComponent (vm: Component, options: InternalComponentOptions) {
