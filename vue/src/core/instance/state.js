@@ -133,6 +133,8 @@ function initData(vm: Component) {
   const props = vm.$options.props
   const methods = vm.$options.methods
   let i = keys.length
+  
+  // 这里的判断是为了避免 props, data, method 等数据发生冲突，同名的问题。
   while (i--) {
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
@@ -154,6 +156,7 @@ function initData(vm: Component) {
     }
   }
   // observe data
+  // 响应式化
   observe(data, true /* asRootData */)
 }
 
@@ -232,8 +235,8 @@ export function defineComputed(
   } else {
     sharedPropertyDefinition.get = userDef.get
       ? shouldCache && userDef.cache !== false
-        ? createComputedGetter(key)
-        : createGetterInvoker(userDef.get)
+        ? createComputedGetter(key)         // 浏览器中触发的情况，里面会对数据的访问关联一个watcher。
+        : createGetterInvoker(userDef.get)  // 服务器端渲染的时候触发，里面直接计算不会涉及到watcher处理。
       : noop
     sharedPropertyDefinition.set = userDef.set || noop
   }

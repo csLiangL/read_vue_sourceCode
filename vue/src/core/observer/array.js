@@ -7,6 +7,7 @@ import { def } from '../util/index'
 
 const arrayProto = Array.prototype
 export const arrayMethods = Object.create(arrayProto)
+// arrayMethods就是data中数组要继承的原型。
 
 const methodsToPatch = [
   'push',

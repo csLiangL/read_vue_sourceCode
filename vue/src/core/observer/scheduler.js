@@ -6,7 +6,7 @@ import { callHook, activateChildComponent } from '../instance/lifecycle'
 
 import {
   warn,
-  nextTick,
+  nextTick,   // 微任务: process.nextTick => promise.resolve => setTimeout()
   devtools,
   inBrowser,
   isIE
@@ -14,6 +14,7 @@ import {
 
 export const MAX_UPDATE_COUNT = 100
 
+// watcher队列，简单理解为 事件队列
 const queue: Array<Watcher> = []
 const activatedChildren: Array<Component> = []
 let has: { [key: number]: ?true } = {}

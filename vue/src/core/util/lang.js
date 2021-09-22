@@ -17,6 +17,8 @@ export function isReserved (str: string): boolean {
 
 /**
  * Define a property.
+ * 提供 enumerable 是为了 防止死递归：循环引用
+ * app.$el.__vue__ === app    true
  */
 export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
   Object.defineProperty(obj, key, {

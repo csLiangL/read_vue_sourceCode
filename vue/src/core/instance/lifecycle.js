@@ -190,6 +190,7 @@ export function mountComponent(
     // 用户$mount()时, 定义updateComponent
     updateComponent = () => {
       // _render()组件的渲染函数.
+      // _update内部调用patch方法 将虚拟DOM与真实DOM同步(diff)
       vm._update(vm._render(), hydrating)
     }
   }

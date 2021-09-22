@@ -25,21 +25,24 @@ let uid = 0
  * This is used for both the $watch() api and directives.
  */
 export default class Watcher {
-  vm: Component;
+  vm: Component;      // 循环引用：app._watcher.vm === app
   expression: string;
-  cb: Function;
+  cb: Function;       // 在定义Vue构造函数时，传入的watcher
   id: number;
   deep: boolean;
   user: boolean;
-  lazy: boolean;
+  lazy: boolean;      // 计算属性 和watcher控制不要让Watcher立即执行
   sync: boolean;
   dirty: boolean;
   active: boolean;
+
   deps: Array<Dep>;
-  newDeps: Array<Dep>;
   depIds: SimpleSet;
+
+  newDeps: Array<Dep>;
   newDepIds: SimpleSet;
-  before: ?Function;
+
+  before: ?Function;  
   getter: Function;
   value: any;
 
@@ -130,9 +133,9 @@ export default class Watcher {
     const id = dep.id
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id)
-      this.newDeps.push(dep)
+      this.newDeps.push(dep)    // 让watcher关联到dep
       if (!this.depIds.has(id)) {
-        dep.addSub(this)
+        dep.addSub(this)        // 让dep关联到watcher
       }
     }
   }
@@ -144,7 +147,7 @@ export default class Watcher {
     let i = this.deps.length
     while (i--) {
       const dep = this.deps[i]
-      if (!this.newDepIds.has(dep.id)) {
+      if (!this.newDepIds.has(dep.id)) {    // 让旧的deps和新的newDeps一致。
         dep.removeSub(this)
       }
     }
@@ -164,22 +167,23 @@ export default class Watcher {
    */
   update () {
     /* istanbul ignore else */
-    if (this.lazy) {
+    if (this.lazy) {          // 计算属性
       this.dirty = true
-    } else if (this.sync) {
+    } else if (this.sync) {   // 同步：立即计算，主要用于SSR
       this.run()
     } else {
-      queueWatcher(this)
+      queueWatcher(this)      // 浏览器中的异步，类比与setTimeout( ()=>this.run(), 0 )
     }
   }
 
   /**
    * Scheduler job interface.
    * Will be called by the scheduler.
+   * 调用get求值或渲染，如果求值，新旧值不同，触发cb
    */
   run () {
     if (this.active) {
-      const value = this.get()
+      const value = this.get()    // 要么渲染，要么求值
       if (
         value !== this.value ||
         // Deep watchers and watchers on Object/Arrays should fire even

@@ -22,8 +22,10 @@ function _traverse (val: any, seen: SimpleSet) {
   if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
     return
   }
+  // __ob__ 表示该对象是响应式的
   if (val.__ob__) {
     const depId = val.__ob__.dep.id
+    // 保证循环引用不会被遍历
     if (seen.has(depId)) {
       return
     }
@@ -31,10 +33,10 @@ function _traverse (val: any, seen: SimpleSet) {
   }
   if (isA) {
     i = val.length
-    while (i--) _traverse(val[i], seen)
+    while (i--) _traverse(val[i], seen)   // 对每个数组项 递归访问
   } else {
     keys = Object.keys(val)
     i = keys.length
-    while (i--) _traverse(val[keys[i]], seen)
+    while (i--) _traverse(val[keys[i]], seen)   // 对每一个属性递归访问
   }
 }
