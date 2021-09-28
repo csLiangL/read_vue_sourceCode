@@ -35,9 +35,14 @@ function observe(data) {
  *      - 若是 非对象，则不处理。
  */
 function defineReactive(data, key, value = data[key]) {
+
+    let dep = [];        // 将所有 依赖 key 的 watcher收集起来。
+
     observe(value);      // ！！若 属性值 是对象，将其也变成响应式的
+
     Object.defineProperty(data, key, {
         get() {
+            dep.push()         // ！！第一次渲染拿数据时，此时watcher还没有实例化完成。
             return value;
         },
         set(newVal) {
