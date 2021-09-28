@@ -26,7 +26,6 @@ class Dep {
 // 当前内存中的watcher，用来更新渲染组件。
 Dep.target = null;
 
-
 // 为什么要用一个数组来存储watcher？？？
 let targetStack = [];
 

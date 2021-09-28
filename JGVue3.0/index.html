@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JGVue3.0</title>
+    <script src="./src/initdata.js"></script>
+</head>
+
+<body>
+    <script>
+        let o = {
+            name: "张三",
+            age: 20,
+            address: ["大望路", "北工大"],
+            friends: [{
+                name: "李四",
+                age: 18,
+            }, {
+                name: "王五",
+                age: 20,
+            }]
+        }
+        new Observer(o)
+    </script>
+</body>
+
+</html>
