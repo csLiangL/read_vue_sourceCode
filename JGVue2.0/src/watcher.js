@@ -12,7 +12,7 @@ class Watcher {
     get() {
         pushTarget(this);               // 第一次渲染时，保留上下文
         this.getter.call(this.vm)       // 重新生成 VDOM + _data, 并渲染。
-        // popTarget(this);
+        popTarget(this);
     }
 
     // 执行，并判断 1.是不是懒加载，2.是不是同步执行，3.是不是异步执行。

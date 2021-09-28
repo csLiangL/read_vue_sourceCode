@@ -22,15 +22,18 @@ class Watcher {
     }
 
     get() {
-        window.target = this;           // 下面要进行依赖收集(读数据)，需要用到此watcher，为了保留上下文，将此watcher存入全局。
+        // window.target = this;           // 下面要进行依赖收集(读数据)，需要用到此watcher，为了保留上下文，将此watcher存入全局。
+        pushTarget(this);
         let value = getValueByPath(this.data, this.exp);
+        popTarget();
         return value;
     }
 
     // 当依赖的数据发生改变时，调用。
     update() {
+        let oldVal = this.value;
         this.value = getValueByPath(this.data, this.exp);   // 更新数据
-        this.cb();
+        this.cb.call(this.data, this.value, oldVal);        // 让该回调可以监听数据的新值和旧值
     }
 
     // o = { friend: {adress: {name: "北京"}}  }
@@ -43,5 +46,20 @@ class Watcher {
         }
         return temp;
     }
+}
 
+// 当前内存中的watcher，用来更新渲染组件。
+Dep.target = null;
+
+// 栈结构，若 父在渲染过程中(会创建watcher1)，发现子组件也需要渲染(会创建watcher2)，因此用targetStack来保存 父子组件的 渲染栈。
+let targetStack = [];
+
+
+function pushTarget(target) {
+    targetStack.push(target);
+    Dep.target = target;
+}
+
+function popTarget() {
+    Dep.target = targetStack.pop();
 }
