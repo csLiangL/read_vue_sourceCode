@@ -24,7 +24,7 @@ JGVue.prototype.createRenderFn = function () {
 // 将 模板VNode 转换为 有数据的VNode
 JGVue.prototype.mountComponent = function () {
     let mount = () => {
-        this.update(this.render());
+        this.update(this.render());         // this.render()实际上就是 combine
     }
     new Watcher(this, mount)      // 相当于重新渲染组件。
 }

@@ -57,4 +57,97 @@
 
 
 
+# 各个函数的说明
 
+## Vnode类
+
+- 属性有 `tagName, data, value, type, children`，方法为 `appendChild(vnode)`。
+
+## getValueByPath(obj, path)
+
+- 目的：将 x.y.z 转化为 x\[y][z]
+
+  ```javascript
+  res = obj;
+  prop = arr.shift();
+  res = res[prop]
+  ```
+## parseToVNode(node)
+
+- 将 DOM节点node 转化为 虚拟DOM实例，并返回。
+- 非文本节点：
+  - `_vnode = new VNode(nodeName, attributes, undefined, nodeType)`
+  - `_vnode.appendChild(parseToVNode(childNodes))`
+- 文本节点：
+  - `_vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);`
+
+## parseToNode(vnode)
+
+- 将 虚拟DOM节点 转化为 真实node，并返回。
+- 非文本节点：
+  - `_node = document.createElement(vnode.tag);`
+  - `_node.setAttribute(attr, data[attr]);`
+  - `_node.appendChild(parseToNode(child));`
+- 文本节点：
+  - `_node = document.createTextNode(vnode.value);`
+
+## combine(vnode, data)
+
+- 将 含有"{{ }}" 的 vnode 转化为 带数据的 vnode。
+
+- 非文本节点：
+
+  - `_vnode.appendChild(combine(child, data));`
+
+- 文本节点：
+
+  - ```javascript
+    _vnode.value = vnode.value.replace(
+                /\{\{(.+?)\}\}/,
+                function (_, g) {
+                    return getValueByPath(data, g.trim())       // 触发了读取器set
+                }
+            )
+    ```
+
+  ## initData()
+
+- 定义在 Vue原型上，对 Vue实例的数据进行响应式化，并代理。
+
+  - 响应式化，和代理都要用到 `defineProperty()`。
+
+  - 响应式函数，每一个响应式对象 会对应一个 Observe实例。在实例的初始化中 会对接收到的对象 的 每个属性 进行响应式化。
+
+    - 对每个属性 `defineProperty()`，`get()`时依赖收集，`set()`时派发更新。
+    - 若该属性 的属性值 也是一个对象，则将 这个对象 再次 对应一个 Oberve实例；如果不是对象就不处理。
+
+  - 代理函数：`proxy(target, prop, key)`，本质上是给 target[key] 增加了属性。
+
+    ```javascript
+    function proxy(target, prop, key) {
+        Object.defineProperty(target, key, {
+            configurable: true,
+            enumerable: true,
+            set(newVal) {
+                target[prop][key] = newVal;
+            },
+            get() {
+                return target[prop][key];
+            }
+        })
+    }
+    ```
+
+### 怎么依赖收集的？
+
+- 每 对一个属性 响应式化，这个属性就会对应一个 Dep实例，而每次读取这个属性，会有一个全局的`watcher`，依赖收集就是把这个全局的watcher加入到 Dep实例的内部数组中，也就是存储了 与这个 属性相关的 所有watcher。
+
+### 怎么派发更新的？
+
+- 当有属性 发生更改时，就是拿到这个属性对应的 Dep实例，其中存储了与这个属性相关的所有watcher，然后让 watcher自己去更新。
+
+## watcher是在什么时候创建的？
+
+- 挂载组件时，创建的watcher，将 渲染函数 也传递进入了 watcher 类中。
+- 这个渲染函数会在两个地方调用，1. watcher初始化时，2. 数据发生改变时。
+- 渲染函数的作用，缓存了 模板VNode，当数据发生改变时，只要将模板VNode + data，重新渲染成 带数据的VNode。

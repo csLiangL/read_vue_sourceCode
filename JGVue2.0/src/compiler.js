@@ -15,11 +15,14 @@ function parseToVNode(node) {
     let nodeType = node.nodeType;
     let _vnode = null;
 
+    // 元素节点
     if (nodeType === 1) {
         let nodeName = node.nodeName;
         let attrs = node.attributes;
         let _attrObj = {};
 
+        // attrs: Map类型 {0: id, 1:class}.
+        // value: DOM结构如 id="demo", 可以通过 nodeName拿到"id", nodeValue拿到"demo".
         Array.prototype.forEach.call(attrs, (value, idx) => {
             _attrObj[value.nodeName] = value.nodeValue;
         })
@@ -30,6 +33,8 @@ function parseToVNode(node) {
         Array.prototype.forEach.call(children, (childNode, idx) => {
             _vnode.appendChild(parseToVNode(childNode));
         })
+
+        // 文本节点
     } else if (nodeType === 3) {
         _vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
     }
@@ -80,6 +85,7 @@ function combine(vnode, data) {
             _vnode.appendChild(combine(child, data));
         })
     } else if (_type == 3) {
+        // .+? 匹配任意字符，满足条件的情况下只匹配一次
         _vnode.value = vnode.value.replace(
             /\{\{(.+?)\}\}/,
             function (_, g) {
@@ -88,4 +94,18 @@ function combine(vnode, data) {
         )
     }
     return _vnode;
+}
+
+
+// let template = "Hello, ${who}, ${wether}"
+// let values = {who: "world", wether: "sunny"}
+function formatter(template, values) {
+    let newStr = template;
+    newStr = newStr.replace(
+        /\$\{(.+?)\}/g,
+        function (_, g) {
+            return values[g.trim()];
+        }
+    )
+    return newStr;
 }
