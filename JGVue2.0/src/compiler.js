@@ -85,9 +85,9 @@ function combine(vnode, data) {
             _vnode.appendChild(combine(child, data));
         })
     } else if (_type == 3) {
-        // .+? 匹配任意字符，满足条件的情况下只匹配一次
+        // .* 表示匹配任意字符串，再加个"?"表示符合条件的最短的
         _vnode.value = vnode.value.replace(
-            /\{\{(.+?)\}\}/,
+            /\{\{(.*?)\}\}/g,
             function (_, g) {
                 return getValueByPath(data, g.trim())       // 触发了读取器set
             }
@@ -102,7 +102,7 @@ function combine(vnode, data) {
 function formatter(template, values) {
     let newStr = template;
     newStr = newStr.replace(
-        /\$\{(.+?)\}/g,
+        /\$\{(.*?)\}/g,
         function (_, g) {
             return values[g.trim()];
         }
